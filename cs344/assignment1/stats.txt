@@ -1,0 +1,200 @@
+#!/bin/bash
+
+TEMP1=$$_tmp1
+TEMP2=$$_tmp2
+TEMP_FILE=$$_tmp3
+
+trap "rm -f $TEMP1 $TEMP2 $TEMP_FILE; exit 1" INT HUP TERM
+
+####Variables
+inputFile=""
+average=""
+halfDivisor=""
+median=""
+success=0
+failure=1
+
+calcRows() {
+	echo "Average	Median"
+	
+	while read line
+	do
+		#stores the number of values in a row into the variable
+		numPerRow=($(echo $line | wc -w))
+		#translates tabs to newlines, allowing one number per line
+		numPerLine=$(echo $line | tr "\t" "\n")
+
+		sum=0
+		#adds up every number and stores the results into sum
+		for number in $numPerLine
+		do
+			sum=$(expr $sum + $number)
+		done
+
+		calcAverage $sum $numPerRow
+
+#		http://mindspill.net/computing/linux-notes/
+#		using-the-bash-ifs-variable-to-make-fo
+#		r-loops-split-with-non-whitespace-characters/
+
+		#changes the internal field seperator from it's default
+		IFS=$''
+		calcMedian $numPerLine
+		unset IFS
+	
+		echo -e "$average	$median"
+
+	done < $inputFile
+};
+
+
+calcColumns() {
+	
+	#store the number of columns into numColumns
+	numColumns=$(head -n 1 $inputFile | wc -w)
+	
+	#
+	for i in $(seq 1 $numColumns)
+	do
+		#puts the numbers in the current column into the inputFile
+		#then spaces them by newlines
+		numPerLine=$(cut -f $i $inputFile | tr "\t" "\n")
+		sum=0
+		
+		#gets the sum of these numbers
+		for number in $numPerLine
+		do
+			sum=$(expr $sum + $number)
+		done
+		
+		#gets the amount of numbers in the column
+		numPerColumns=($(echo $numPerLine | wc -w))
+		calcAverage $sum $numPerColumns
+
+		IFS=$''
+		calcMedian $numPerLine
+		unset IFS
+		
+		#echoes average and median into temp files
+		#if it's not the first colummn than a tab is added
+		if [[ $i == 1 ]]
+		then
+			echo $average >> $TEMP1
+			echo $median >> $TEMP2
+		else
+			sed -e "s/$/	$average/" -i $TEMP1
+			sed -e "s/$/	$median/" -i $TEMP2
+		fi
+	done
+	
+	#if the file isn't null echoes "averages" and "Medians"
+	#then cats the values from TMP and TMP2 into the respective spots
+	if [[ -s $inputFile ]]
+	then
+		echo "Averages:"
+		cat $TEMP1
+		echo "Medians:"
+		cat $TEMP2
+	else
+		echo "Averages:"
+		echo "Medians:"
+	fi
+};
+
+#Calculates the median of the given numbers
+calcMedian() {
+	
+	#sorts all of the values, transorms spaces to newlines, sorts these
+	#numbers, then transforms the newlines back to spaces
+	sortedLine=$( echo $1 | tr " " "\n" | sort -g | tr "\n" " " )
+	
+	#half divisor is found in the function calcAverage
+	medianPosition=$(expr $halfDivisor + 1)
+	
+	median=$(echo $sortedLine | cut -d " " -f $medianPosition)
+};
+
+#Calculates the average of the given numbers, only gives whole 
+#numbers as answers. Also checks for division by 0 (Where it outputs nothing)
+calcAverage() {
+	
+	#cool formula in order to not truncate for whole numbers
+	#average = (dividend + (divisor/2)) / divisor 
+	halfDivisor=$(expr $2 / 2 )
+	average=$(expr $1 + $halfDivisor )
+	
+	#conditional check as per homework, prints out nothing if
+	#division by 0 would be required
+	if (($2 == 0))
+	then
+		average=""
+	else
+		average=$(expr $average / $2)
+	fi
+};
+
+
+#Takes user input and formats it into files so that they can be
+#read by calcRows and calcColumns
+calcStdin() {
+	while read line
+	do
+		echo -e "$line" >> $TEMP_FILE
+	done < /dev/stdin
+	inputFile=$TEMP_FILE
+};
+
+fileErrorMessage() {
+	echo "Stats: Can't read $2" >&2
+};
+
+usageMessage() {
+	echo " Usage: stats{-rows|-cols} [file]" >&2
+};
+
+####MAIN####
+
+#Checks the number of arguments
+if [[ "$#" < 1 ]]
+then
+	usageMessage
+	exit $failure
+fi
+
+if [[ "$#" > 2 ]]
+then
+	usageMessage
+	exit $failure
+fi
+
+#Checks if a file is specified, then checks if it's able to be read
+if [[ "$2" != "" ]]
+then
+	if [ ! -r "$2" ]
+	then
+		fileErrorMessage
+		exit $failure
+	else
+		inputFile=$2
+	fi
+else
+	calcStdin
+fi
+
+#Checks the format of the arguments
+if [[ "$1" == -r* ]]
+then
+	calcRows
+elif [[ "$1" == -c* ]]
+then
+	 calcColumns
+else
+	usageMessage
+	exit $failure
+fi
+
+#Cleans up temp files
+rm -f $TEMP1 $TEMP2 $TEMP_FILE
+
+exit 0
+
