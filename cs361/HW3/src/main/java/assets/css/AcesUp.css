@@ -1,0 +1,57 @@
+body{
+background-image:url("../../assets/background.jpg");
+}
+
+.centered {
+width: 400px;
+height: 270px;
+margin-left: auto;
+margin-right: auto;
+}
+
+table.center{
+margin-left:auto;
+margin-right:auto;
+}
+#topright {
+position : relative;
+}
+#topright button{
+    top: 0px;
+    right: 300px;
+}
+
+tr{
+width:500px;
+}
+
+td{
+width:100px;
+height:20px;
+text-align:center;
+}
+
+.title{
+font-weight: bold;
+}
+
+.cardLocation{
+width: 60px;
+height: 90px;
+background-size: cover;
+
+}
+
+#remove button{
+    font-family: Arial;
+    color: #ffffff;
+    font-size: 20px;
+    background-color: #d93434;
+    padding: 10px 20px 10px 20px;
+    text-decoration: none;
+}
+
+#remove button:hover{
+    background-color: #4da352;
+    text-decoration: none;
+}
