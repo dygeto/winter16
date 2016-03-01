@@ -1,2 +1,2 @@
 # winter16
-Projecis I undertook during my winter term at Oregon State
+Projects I undertook during my winter term at Oregon State
